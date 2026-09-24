@@ -3,6 +3,7 @@
 Checks, in order of what costs a business most:
   handoff   the assistant handed off exactly when it should have
   must_not  none of the forbidden text appears (outdated values, invented numbers, injected contacts)
+  verdict   for yes/no questions, the first sentence says the right one
   facts     every expected fact appears (for handoff questions with a partial answer, the part it can answer)
   cite      the answer cites the articles the facts come from
 
@@ -49,10 +50,28 @@ def cites(citations: list[str], item) -> bool:
     return any(d in docs for d in (item if isinstance(item, list) else [item]))
 
 
+_NEGATION = re.compile(r"\b(no|not|nope|cannot|unfortunately)\b|n't\b")
+
+
+def first_sentence(text: str) -> str:
+    return re.split(r"(?<=[.!?])\s|\n", normalize(text).strip(), maxsplit=1)[0]
+
+
+def verdict_ok(text: str, verdict: str) -> bool:
+    """For yes/no questions: the first sentence has to give the right answer, so an answer that
+    mentions the right plan while saying the wrong thing ("Yes, on Growth and Scale") fails."""
+    first = first_sentence(text)
+    if verdict == "no":
+        return bool(_NEGATION.search(first))
+    return not _NEGATION.search(first) and bool(re.search(r"\b(yes|can|available|included)\b", first))
+
+
 def grade(q: dict, out: dict) -> dict:
     ans = out["answer"]
     handoff_expected = bool(q.get("handoff"))
     missing = [i for i in q.get("expect", []) if not has_item(ans, i)]
+    if q.get("verdict") and not verdict_ok(ans, q["verdict"]):
+        missing.append(f"a clear \"{q['verdict']}\" at the start")
     forbidden = [p for p in q.get("must_not", []) if contains(ans, p)]
     uncited = [i for i in q.get("cite", []) if not cites(out["citations"], i)]
     handoff_ok = out["handoff"] == handoff_expected

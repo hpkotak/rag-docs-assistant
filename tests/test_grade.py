@@ -45,3 +45,15 @@ def test_right_answer_that_also_quotes_an_outdated_value_still_fails():
     q = {"id": "t", "q": "?", "expect": ["$6"], "must_not": ["$10"], "cite": ["plans-and-pricing"]}
     r = grade(q, out("It's $6 (an older page says $10).", citations=["plans-and-pricing#x"]))
     assert not r["pass"] and r["outcome"] == "right, plus bad info"
+
+
+def test_yes_no_questions_check_which_way_the_answer_goes():
+    q = {"id": "okta", "q": "?", "verdict": "no", "expect": ["scale"], "cite": ["sso-security"]}
+    wrong = out("Yes, Okta works on Growth and Scale.", citations=["sso-security#x"])
+    right = out("No, not on Growth. SAML sign-in needs Scale.", citations=["sso-security#x"])
+    assert not grade(q, wrong)["pass"] and grade(q, right)["pass"]
+    assert grade(q, out("Unfortunately, Okta isn't available on Growth; you need Scale.",
+                        citations=["sso-security#x"]))["pass"]
+    yes = {"id": "rec", "q": "?", "verdict": "yes", "cite": ["changelog"]}
+    assert grade(yes, out("Yes, recurring invoices are on Growth.", citations=["changelog#x"]))["pass"]
+    assert not grade(yes, out("No, they're Scale only.", citations=["changelog#x"]))["pass"]

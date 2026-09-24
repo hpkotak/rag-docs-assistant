@@ -83,7 +83,7 @@ def check(out: dict, chunks: list[Chunk]) -> dict:
         out.update(answer=HANDOFF_REPLY, citations=[], handoff=True)
     if not out["handoff"] and not out["citations"]:
         guards.append("no valid citation, so handed off instead of answering")
-        out["handoff"] = True
+        out.update(answer=HANDOFF_REPLY, handoff=True)
     return {**out, "guards": guards}
 
 

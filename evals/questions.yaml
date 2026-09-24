@@ -1,6 +1,7 @@
 # Eval set for the Tallyfox help assistant.
 #
 # Fields:
+#   verdict   for yes/no questions: the first sentence must say "yes" or "no" (see evals/grade.py).
 #   expect    facts the answer must contain. Each item is a string, or a list of accepted alternatives.
 #   must_not  text the answer must not contain (stale values, wrong sums, invented numbers, injected text).
 #   evidence  text from the docs the answer depends on. Used to check retrieval: is it in the
@@ -177,6 +178,7 @@
 - id: growth-okta
   category: multi-hop
   q: We're on Growth. Can our team sign in through Okta?
+  verdict: no
   expect: ["scale"]
   evidence: [["SAML single sign-on (SSO):** Scale only", "| SAML single sign-on | No | No | Yes |"]]
   cite: [[sso-security, plans-and-pricing]]
@@ -198,6 +200,7 @@
 - id: member-api-key
   category: multi-hop
   q: Can someone with the Member role create an API key?
+  verdict: no
   expect: [["owner", "admin"]]
   evidence: [["Owners and Admins can create API keys", "Can manage team members and API keys"]]
   cite: [[api-authentication, team-roles]]
@@ -212,6 +215,7 @@
 - id: webhook-down-weekend
   category: multi-hop
   q: If our webhook endpoint is down for a long weekend, do we lose the events?
+  verdict: no
   expect: [["3 days", "3 day"], ["30 days", "30 day"]]
   evidence: ["we retry up to 8 times over 3 days", "resent from the webhook's log for up to 30 days"]
   cite: [api-webhooks]
@@ -220,6 +224,7 @@
 - id: growth-custom-domain
   category: near-miss
   q: Can I put the client portal on my own domain if I'm on Growth?
+  verdict: no
   expect: ["scale"]
   evidence: [["On Scale, the portal can use your own domain", "| Custom domain for the client portal | No | No | Yes |"]]
   cite: [[client-portal, plans-and-pricing]]
@@ -243,6 +248,7 @@
 - id: starter-extra-member
   category: near-miss
   q: Can I pay for a second team member on Starter?
+  verdict: no
   expect: [["not available", "isn't available", "can't", "cannot", "not possible", "doesn't allow", "does not allow", "only 1", "only one", "upgrade"]]
   must_not: ["$10 per"]
   evidence: ["| Extra team members | Not available"]
@@ -251,6 +257,7 @@
 - id: starter-require-2fa
   category: near-miss
   q: I'm on Starter. Can I force everyone on my team to use two-factor authentication?
+  verdict: no
   expect: [["growth", "scale"]]
   evidence: ["On Growth and\nScale, Admins can also require it"]
   cite: [sso-security]
@@ -294,6 +301,7 @@
 - id: growth-still-29
   category: stale
   q: Growth is still $29 a month, right?
+  verdict: no
   expect: ["$39"]
   evidence: [["| Growth | $39 |", "Growth $39"]]
   cite: [[plans-and-pricing, changelog]]
@@ -301,6 +309,7 @@
 - id: recurring-on-growth
   category: stale
   q: Can I set up recurring invoices on the Growth plan?
+  verdict: yes
   expect: [["yes", "included", "available on growth", "available on the growth"]]
   must_not: ["upgrade to scale", "upgrade to the scale", "not available on growth", "isn't available on growth", "not included in growth", "not included on growth"]
   evidence: [["are now included in the Growth plan", "| Recurring invoices | No | Yes | Yes |"]]
@@ -309,6 +318,7 @@
 - id: paypal-new-account
   category: stale
   q: I just signed up. How do I connect PayPal so clients can pay me with it?
+  verdict: no
   expect: [["no longer", "not available", "isn't available", "not possible", "can't", "cannot", "retired"]]
   evidence: ["New accounts can no longer connect PayPal"]
   cite: [changelog]

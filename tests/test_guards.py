@@ -31,6 +31,7 @@ def test_citations_must_be_sources_that_were_sent():
 def test_answer_without_valid_citation_is_handed_off():
     r = check({"answer": "Yes, 99.9%.", "citations": ["made-up#x"], "handoff": False}, SOURCES)
     assert r["handoff"] and r["citations"] == []
+    assert r["answer"] == HANDOFF_REPLY  # the unsupported text never reaches the customer
 
 
 def test_a_handoff_needs_no_citation():
