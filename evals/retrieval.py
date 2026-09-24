@@ -1,6 +1,7 @@
 """Retrieval-only check: do the sources sent to the model contain what the answer needs?
 
-    uv run python -m evals.retrieval
+    uv run python -m evals.retrieval                        # main eval set
+    uv run python -m evals.retrieval evals/heldout.yaml     # held-out set
 
 Two measures, over the questions the docs can answer:
   articles  the sources include the articles the answer should cite
@@ -12,17 +13,14 @@ No model is involved, so this runs offline and gives the same numbers every time
 import os
 import sys
 
-import yaml
-
 from assistant.corpus import ROOT, chunk_fixed, chunk_sections, load_docs
 from assistant.pipeline import VERSIONS, retriever
 from evals.grade import cites, has_item
+from evals.report import load_questions
 
-QUESTIONS = yaml.safe_load((ROOT / "evals" / "questions.yaml").read_text())
 
-
-def score(index, k: int) -> dict:
-    cases = [q for q in QUESTIONS if q.get("evidence")]
+def score(index, k: int, questions: list[dict] | None = None) -> dict:
+    cases = [q for q in (questions or load_questions()) if q.get("evidence")]
     art_miss, ev_miss = [], []
     for q in cases:
         chunks = index.search(q["q"], k)
@@ -46,8 +44,9 @@ def configs() -> list[tuple[str, object, int]]:
 
 
 def main():
+    questions = load_questions(sys.argv[1] if len(sys.argv) > 1 else None)
     for label, index, k in configs():
-        r = score(index, k)
+        r = score(index, k, questions)
         print(f"articles {r['articles']}/{r['n']}  evidence {r['evidence']}/{r['n']}  {label}")
         if r["evidence_missed"]:
             print(f"    evidence missed: {', '.join(r['evidence_missed'])}")

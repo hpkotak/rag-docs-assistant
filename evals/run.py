@@ -2,6 +2,7 @@
 
     uv run python -m evals.run                                    # offline mock model, a few seconds
     uv run python -m evals.run --backend claude-code --models haiku,opus --trials 5
+    uv run python -m evals.run --backend claude-code --models haiku,opus --questions evals/heldout.yaml --out results/heldout
 
 Results are appended to <out>/results.jsonl as each answer comes back, so an interrupted run
 continues where it stopped when started again with the same --out.
@@ -16,15 +17,12 @@ import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
-import yaml
-
 from assistant.backends import BACKENDS, ModelError, UsageLimit, redact
 from assistant.corpus import ROOT
 from assistant.pipeline import VERSIONS, answer, retrieve
 from evals import report
+from evals.report import load_questions
 from evals.grade import grade
-
-QUESTIONS = yaml.safe_load((ROOT / "evals" / "questions.yaml").read_text())
 
 
 def run_one(backend: str, model: str, version: str, q: dict, chunks, attempts: int = 3) -> dict:
@@ -49,11 +47,12 @@ def main():
     ap.add_argument("--only", default="", help="comma-separated question ids")
     ap.add_argument("--workers", type=int, default=4)
     ap.add_argument("--out", default="")
+    ap.add_argument("--questions", default="", help="eval set file (default: evals/questions.yaml)")
     a = ap.parse_args()
 
     models = ["mock"] if a.backend == "mock" else a.models.split(",")
     versions = a.versions.split(",")
-    questions = [q for q in QUESTIONS if not a.only or q["id"] in a.only.split(",")]
+    questions = [q for q in load_questions(a.questions or None) if not a.only or q["id"] in a.only.split(",")]
     out = Path(a.out or ROOT / "results" / a.backend)
     out.mkdir(parents=True, exist_ok=True)
     path = out / "results.jsonl"
@@ -89,7 +88,7 @@ def main():
             status = "ERROR" if "error" in row else ("pass" if row["pass"] else row["outcome"].upper())
             print(f"[{n}/{len(jobs)}] {m} {v} {q['id']} #{t}: {status}", flush=True)
 
-    report.write(out)
+    report.write(out, a.questions or None)
     sys.stdout.flush()
     os._exit(0)  # onnxruntime can crash while Python shuts down; everything is saved by now
 

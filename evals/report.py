@@ -9,14 +9,18 @@ import yaml
 from assistant.corpus import ROOT
 from evals.grade import grade
 
-QUESTIONS = yaml.safe_load((ROOT / "evals" / "questions.yaml").read_text())
+def load_questions(path=None) -> list[dict]:
+    return yaml.safe_load(Path(path or ROOT / "evals" / "questions.yaml").read_text())
+
+
+QUESTIONS = load_questions()
 CATEGORIES = list(dict.fromkeys(q["category"] for q in QUESTIONS))
 OUTCOMES = ["wrong answer", "made up", "right, plus bad info", "partial", "unneeded handoff", "missing citation"]
 
 
-def load(out: Path) -> list[dict]:
+def load(out: Path, questions: list[dict] = QUESTIONS) -> list[dict]:
     """Saved answers, regraded against the current eval set (dropping questions no longer in it)."""
-    by_id = {q["id"]: q for q in QUESTIONS}
+    by_id = {q["id"]: q for q in questions}
     rows = {}
     for line in (out / "results.jsonl").read_text().splitlines():
         r = json.loads(line)
@@ -69,8 +73,9 @@ def pct(x: float) -> str:
     return f"{round(100 * x)}%"
 
 
-def md_report(summary: dict, rows: list[dict]) -> str:
+def md_report(summary: dict, rows: list[dict], questions: list[dict] = QUESTIONS) -> str:
     keys = list(summary)
+    categories = list(dict.fromkeys(q["category"] for q in questions))
     lines = ["# Docs assistant eval results", ""]
     lines += ["| Setup | Correct (single answers) | Questions correct in every run | Confidently wrong | "
               "Outdated answers | Cited the archived 2025 pricing page | Injected contact shown | Unneeded handoffs | "
@@ -87,7 +92,7 @@ def md_report(summary: dict, rows: list[dict]) -> str:
                      + f" | {s['guards_fired']} | {s['errors']} |")
     lines += ["", "## By category (share of single answers correct)", "",
               "| Category | " + " | ".join(keys) + " |", "| --- |" + " --- |" * len(keys)]
-    for c in CATEGORIES:
+    for c in categories:
         lines.append(f"| {c} | " + " | ".join(pct(summary[k]["by_category"].get(c, 0)) for k in keys) + " |")
 
     by = defaultdict(list)
@@ -96,7 +101,7 @@ def md_report(summary: dict, rows: list[dict]) -> str:
             by[(r["question"], f"{r['model']}/{r['version']}")].append(r)
     lines += ["", "## By question (runs correct)", "", "| Question | Category | " + " | ".join(keys) + " |",
               "| --- | --- |" + " --- |" * len(keys)]
-    for q in QUESTIONS:
+    for q in questions:
         cells = []
         for k in keys:
             rs = by.get((q["id"], k), [])
@@ -104,7 +109,7 @@ def md_report(summary: dict, rows: list[dict]) -> str:
         lines.append(f"| {q['id']} | {q['category']} | " + " | ".join(cells) + " |")
 
     lines += ["", "## Example failures", "", "One failing answer per question and setup.", ""]
-    for q in QUESTIONS:
+    for q in questions:
         shown = []
         for k in keys:
             bad = [r for r in by.get((q["id"], k), []) if not r["pass"]]
@@ -124,11 +129,12 @@ def md_report(summary: dict, rows: list[dict]) -> str:
     return "\n".join(lines) + "\n"
 
 
-def write(out: Path):
-    rows = load(out)
+def write(out: Path, questions_path=None):
+    questions = load_questions(questions_path)
+    rows = load(out, questions)
     summary = summarise(rows)
     (out / "summary.json").write_text(json.dumps(summary, indent=2) + "\n")
-    (out / "REPORT.md").write_text(md_report(summary, rows))
+    (out / "REPORT.md").write_text(md_report(summary, rows, questions))
     for k, s in summary.items():
         print(f"{k}: {pct(s['pass_rate'])} correct, {s['all_trials_pass']}/{s['questions']} correct in every run, "
               f"{s['confidently_wrong']} confidently wrong, {s['errors']} errors")
@@ -136,4 +142,5 @@ def write(out: Path):
 
 if __name__ == "__main__":
     import sys
-    write(Path(sys.argv[1] if len(sys.argv) > 1 else ROOT / "results" / "claude-code"))
+    write(Path(sys.argv[1] if len(sys.argv) > 1 else ROOT / "results" / "claude-code"),
+          sys.argv[2] if len(sys.argv) > 2 else None)

@@ -9,17 +9,20 @@ from assistant.pipeline import retriever
 QUESTIONS = yaml.safe_load((ROOT / "evals" / "questions.yaml").read_text())
 
 
-def test_eval_set_is_well_formed():
-    ids = [q["id"] for q in QUESTIONS]
+HELDOUT = yaml.safe_load((ROOT / "evals" / "heldout.yaml").read_text())
+
+
+def test_eval_sets_are_well_formed():
+    ids = [q["id"] for q in QUESTIONS + HELDOUT]
     assert len(ids) == len(set(ids))
-    for q in QUESTIONS:
+    for q in QUESTIONS + HELDOUT:
         assert q["q"] and q["category"]
         assert q.get("handoff") or q.get("cite"), q["id"]  # answerable questions say what to cite
 
 
 def test_every_evidence_phrase_is_in_a_current_article():
     docs = [d for d in load_docs() if d.status == "current"]
-    for q in QUESTIONS:
+    for q in QUESTIONS + HELDOUT:
         for item in q.get("evidence", []):
             assert any(has_item(d.body, item) for d in docs), (q["id"], item)
 
