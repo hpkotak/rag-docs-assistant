@@ -3,6 +3,7 @@
     uv run python -m evals.run                                    # offline mock model, a few seconds
     uv run python -m evals.run --backend claude-code --models haiku,opus --trials 5
     uv run python -m evals.run --backend claude-code --models haiku,opus --questions evals/heldout.yaml --out results/heldout
+    uv run python -m evals.run --backend claude-code --models haiku --versions v1-no-archive --out results/ablation
 
 Results are appended to <out>/results.jsonl as each answer comes back, so an interrupted run
 continues where it stopped when started again with the same --out.
@@ -25,10 +26,30 @@ from evals.report import load_questions
 from evals.grade import grade
 
 
+def _v1_without_archive():
+    from assistant.corpus import chunk_fixed, load_docs
+    from assistant.retrieve import Index
+    return Index(chunk_fixed([d for d in load_docs() if d.status != "archived"]), "dense")
+
+
+# Ablations: one change to a version, to measure what that change does on its own.
+# name -> (version whose prompt and checks are used, index builder, top k)
+VARIANTS = {"v1-no-archive": ("v1", _v1_without_archive, 4)}
+
+
+def sources_for(version: str, questions: list[dict]) -> dict:
+    if version in VARIANTS:
+        _, build, k = VARIANTS[version]
+        index = build()
+        return {(version, q["id"]): index.search(q["q"], k) for q in questions}
+    return {(version, q["id"]): retrieve(q["q"], version) for q in questions}
+
+
 def run_one(backend: str, model: str, version: str, q: dict, chunks, attempts: int = 3) -> dict:
+    base = VARIANTS[version][0] if version in VARIANTS else version
     for attempt in range(1, attempts + 1):
         try:
-            out = answer(q["q"], version, backend, model, chunks)
+            out = answer(q["q"], base, backend, model, chunks)
             break
         except (ModelError, subprocess.TimeoutExpired, OSError) as e:
             if attempt == attempts:
@@ -42,7 +63,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--backend", default="mock", choices=BACKENDS)
     ap.add_argument("--models", default="haiku", help="comma-separated Claude model aliases (ignored by mock)")
-    ap.add_argument("--versions", default="v1,v2")
+    ap.add_argument("--versions", default="v1,v2", help=f"v1, v2 or an ablation: {', '.join(VARIANTS)}")
     ap.add_argument("--trials", type=int, default=5)
     ap.add_argument("--only", default="", help="comma-separated question ids")
     ap.add_argument("--workers", type=int, default=4)
@@ -64,7 +85,7 @@ def main():
                 done.add((r["model"], r["version"], r["question"], r["trial"]))
 
     # Retrieval doesn't depend on the model or the trial, so do it once per question, up front.
-    sources = {(v, q["id"]): retrieve(q["q"], v) for v in versions for q in questions}
+    sources = {key: chunks for v in versions for key, chunks in sources_for(v, questions).items()}
     jobs = [(m, v, q, t) for m in models for v in versions for q in questions
             for t in range(1, a.trials + 1) if (m, v, q["id"], t) not in done]
     print(f"{len(jobs)} answers to get ({len(done)} already done) -> {path}", flush=True)

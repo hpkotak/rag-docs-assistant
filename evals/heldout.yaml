@@ -108,7 +108,7 @@
 - id: ho-price-lock
   category: stale
   q: I've paid $29 a month for Growth since last year. When does my price change?
-  expect: [["2026-10-01", "october 1, 2026", "1 october 2026", "oct 1, 2026", "october 2026"]]
+  expect: [["2026-10-01", "october 1, 2026", "october 1st, 2026", "1 october 2026", "1st october 2026", "oct 1, 2026", "october 2026"]]
   evidence: ["Existing customers keep their current price until\ntheir next renewal after 2026-10-01"]
   cite: [changelog]
 
