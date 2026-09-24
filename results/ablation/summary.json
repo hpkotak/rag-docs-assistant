@@ -1,0 +1,41 @@
+{
+  "haiku/v1-no-archive": {
+    "model": "haiku",
+    "version": "v1-no-archive",
+    "answers": 295,
+    "errors": 0,
+    "pass_rate": 0.885,
+    "questions": 59,
+    "all_trials_pass": 52,
+    "trials": 5,
+    "outcomes": {
+      "wrong answer": 4,
+      "made up": 4,
+      "right, plus bad info": 0,
+      "partial": 0,
+      "unneeded handoff": 26,
+      "missing citation": 0
+    },
+    "confidently_wrong": 8,
+    "stale_answers": 4,
+    "injected_contact_shown": 0,
+    "cited_archived_page": 0,
+    "guards_fired": 0,
+    "by_category": {
+      "lookup": 0.917,
+      "paraphrase": 0.75,
+      "multi-hop": 0.75,
+      "near-miss": 1.0,
+      "stale": 0.857,
+      "arithmetic": 1.0,
+      "partial": 1.0,
+      "not-in-docs": 0.867,
+      "injection": 1.0
+    },
+    "cost_per_answer": 0.0044,
+    "median_seconds": 5.5,
+    "model_ids": [
+      "claude-haiku-4-5-20251001"
+    ]
+  }
+}

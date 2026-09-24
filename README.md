@@ -16,7 +16,8 @@ changelog that replaced them, and a community forum post with instructions plant
 
 ## Results
 
-1,180 answers: 59 questions, 5 runs each, 2 versions of the assistant, 2 models.
+1,180 answers: 59 questions, 5 runs each, 2 versions of the assistant, 2 models. A further 21 held-out
+questions (420 answers) and a one-fix ablation (295 answers) are [below](#what-each-fix-did).
 
 | Setup | Questions right in all 5 runs | Single answers right | Wrong answers given as fact | Answers citing the archived pricing page | Handed off when the docs had the answer | Cost per answer* |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -31,7 +32,9 @@ changelog that replaced them, and a community forum post with instructions plant
 
 - **The biggest problem was the content, not the model.** Most wrong answers came from an archived
   2025 pricing page that was still being searched. It said "30 invoices a month", "$29", "a 30-day trial"
-  and "10 team members". Removing archived pages from the index and dating every source fixed all of them.
+  and "10 team members". Removing only that page cut Haiku's wrong answers from 30 to 8
+  ([measured separately](#what-each-fix-did)). It also exposed search misses the old page had been
+  covering up.
 - **A stronger model changes how it fails without fixing the problem.** Opus rarely stated the old
   price as fact. Instead, when it saw two pages that disagreed, it said so and handed the customer to a
   person. It handed off 47 answers to questions the docs do answer: about half because the pages
@@ -45,6 +48,56 @@ changelog that replaced them, and a community forum post with instructions plant
 ![Share of answers correct by type of question, for each setup](results/claude-code/categories.png)
 
 Full results per question, with example failing answers: [results/claude-code/REPORT.md](results/claude-code/REPORT.md).
+
+## What each fix did
+
+To check which fix mattered, I ran the as-shipped version again with **only** the archived page
+removed (Haiku, the same 59 questions, 5 runs each). Everything else stayed the same: fixed-size chunks,
+embedding search, top 4, the original prompt, no checks in code.
+
+| Haiku 4.5 | Questions right in all 5 runs | Wrong answers given as fact | Handed off when the docs had the answer |
+| --- | --- | --- | --- |
+| As shipped | 48 of 59 | 30 | 14 |
+| Only the archived page removed | 52 of 59 | 8 | 26 |
+| All fixes | 56 of 59 | 1 | 8 |
+
+- Removing the archived page stopped most wrong answers (30 to 8).
+- **But it didn't make those answers right; it made them hand-offs.** "How many invoices on Starter?"
+  and "Cheapest plan for euros?" went from a confident "30" and "$29" to "the documentation doesn't say"
+  in 5 of 5 runs, because the naive search had never found the current plan table. The old page had
+  been hiding that search miss with an outdated answer.
+- The rest of the fixes (section chunks, keyword + embedding search, dates, the prompt) turned those
+  hand-offs into right answers: 26 unneeded hand-offs down to 8.
+
+Results: [results/ablation/REPORT.md](results/ablation/REPORT.md).
+
+## Held-out check
+
+The 59 questions above shaped the fixes, so I froze the assistant (git tag `v2-frozen`), then wrote 21
+new questions about facts the first set never asks, committed them, and only then ran them
+(5 runs each, 420 answers).
+
+| Setup | Questions right in all 5 runs | Single answers right | Wrong answers given as fact |
+| --- | --- | --- | --- |
+| Haiku 4.5, as shipped | 17 of 21 | 83% | 10 |
+| Haiku 4.5, after fixes | 17 of 21 | 90% | 0 |
+| Opus 5.5, as shipped | 18 of 21 | 86% | 0 |
+| Opus 5.5, after fixes | 18 of 21 | 90% | 0 |
+
+- **What carried over:** the fixed version gave no wrong answers as fact. The as-shipped Haiku gave 10,
+  all from the archived page ("50 clients on Starter"; "$149 for 25 people on Scale", using the old $10
+  per extra member).
+- **What didn't:** the number of questions right in every run didn't improve. The fixed version still
+  hands off some answers it got right, and both versions missed the $6 extra-member price for "25 people
+  on Scale" (retrieval found it for neither). Part of the jump on the main set (48 to 56) came from tuning
+  on those questions.
+- **Judgment calls I left as graded:** asked "can clients pay in Bitcoin?", Haiku usually said no, based
+  on the list of payment methods, instead of handing off (Opus handed off every time). Asked about a slow refund, Opus answered
+  correctly and also handed off, because the docs don't say how long refunds take. Both count as
+  failures under the rules set before the run. One grading fix after the run: "October 1st, 2026" is now
+  accepted as a date.
+
+Results: [results/heldout/REPORT.md](results/heldout/REPORT.md).
 
 ## Findings (assistant as shipped)
 
@@ -112,11 +165,12 @@ The fixed version ([`assistant/pipeline.py`](assistant/pipeline.py), [`prompts/v
 ## Limits of this test
 
 - **I wrote the help center, the questions and the fixes.** The v2 prompt, the keyword search's
-  stopword list and some grading rules were adjusted after seeing results, and there is no held-out
-  question set yet. Treat the "after fixes" numbers as an upper bound for these 59 questions.
-- **v2 changes several things at once** (archived pages removed, dates, section chunks, hybrid search,
-  prompt, checks in code). The retrieval table above separates the search changes; which change fixed
-  which answer end to end is inferred from the answers and their citations, not measured one at a time.
+  stopword list and some grading rules were adjusted after seeing results on the main 59 questions.
+  The [held-out check](#held-out-check) is the fairer measure of the fixed version: fewer wrong answers,
+  but no more questions right in every run.
+- **The ablation separates only one fix** (the archived page), on one model. The other fixes (sections,
+  hybrid search, dates, prompt, checks in code) are measured together, apart from the offline retrieval
+  table.
 - **Grading was corrected after the run**, the same way for every setup: 6 checks that marked right
   answers as wrong were fixed, and "right, plus bad info" (the right fact plus an outdated value or the
   planted address) became its own outcome instead of counting as a wrong answer. That moved the
