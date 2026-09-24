@@ -1,0 +1,158 @@
+{
+  "haiku/v1": {
+    "model": "haiku",
+    "version": "v1",
+    "answers": 295,
+    "errors": 0,
+    "pass_rate": 0.831,
+    "questions": 59,
+    "all_trials_pass": 48,
+    "trials": 5,
+    "outcomes": {
+      "wrong answer": 30,
+      "made up": 0,
+      "right, plus bad info": 6,
+      "partial": 0,
+      "unneeded handoff": 14,
+      "missing citation": 0
+    },
+    "confidently_wrong": 30,
+    "stale_answers": 10,
+    "injected_contact_shown": 0,
+    "cited_archived_page": 38,
+    "guards_fired": 0,
+    "by_category": {
+      "lookup": 0.85,
+      "paraphrase": 0.75,
+      "multi-hop": 0.8,
+      "near-miss": 0.675,
+      "stale": 0.714,
+      "arithmetic": 1.0,
+      "partial": 1.0,
+      "not-in-docs": 1.0,
+      "injection": 1.0
+    },
+    "cost_per_answer": 0.00447,
+    "median_seconds": 5.1,
+    "model_ids": [
+      "claude-haiku-4-5-20251001"
+    ]
+  },
+  "haiku/v2": {
+    "model": "haiku",
+    "version": "v2",
+    "answers": 295,
+    "errors": 0,
+    "pass_rate": 0.969,
+    "questions": 59,
+    "all_trials_pass": 56,
+    "trials": 5,
+    "outcomes": {
+      "wrong answer": 1,
+      "made up": 0,
+      "right, plus bad info": 0,
+      "partial": 0,
+      "unneeded handoff": 8,
+      "missing citation": 0
+    },
+    "confidently_wrong": 1,
+    "stale_answers": 0,
+    "injected_contact_shown": 0,
+    "cited_archived_page": 0,
+    "guards_fired": 0,
+    "by_category": {
+      "lookup": 1.0,
+      "paraphrase": 0.875,
+      "multi-hop": 0.925,
+      "near-miss": 1.0,
+      "stale": 1.0,
+      "arithmetic": 0.96,
+      "partial": 1.0,
+      "not-in-docs": 1.0,
+      "injection": 1.0
+    },
+    "cost_per_answer": 0.00471,
+    "median_seconds": 4.7,
+    "model_ids": [
+      "claude-haiku-4-5-20251001"
+    ]
+  },
+  "opus/v1": {
+    "model": "opus",
+    "version": "v1",
+    "answers": 295,
+    "errors": 0,
+    "pass_rate": 0.797,
+    "questions": 59,
+    "all_trials_pass": 46,
+    "trials": 5,
+    "outcomes": {
+      "wrong answer": 5,
+      "made up": 0,
+      "right, plus bad info": 8,
+      "partial": 0,
+      "unneeded handoff": 47,
+      "missing citation": 0
+    },
+    "confidently_wrong": 5,
+    "stale_answers": 0,
+    "injected_contact_shown": 2,
+    "cited_archived_page": 52,
+    "guards_fired": 0,
+    "by_category": {
+      "lookup": 0.833,
+      "paraphrase": 0.625,
+      "multi-hop": 0.675,
+      "near-miss": 0.75,
+      "stale": 0.714,
+      "arithmetic": 1.0,
+      "partial": 1.0,
+      "not-in-docs": 1.0,
+      "injection": 0.8
+    },
+    "cost_per_answer": 0.02063,
+    "median_seconds": 4.7,
+    "model_ids": [
+      "claude-opus-5-5"
+    ]
+  },
+  "opus/v2": {
+    "model": "opus",
+    "version": "v2",
+    "answers": 295,
+    "errors": 0,
+    "pass_rate": 0.966,
+    "questions": 59,
+    "all_trials_pass": 57,
+    "trials": 5,
+    "outcomes": {
+      "wrong answer": 0,
+      "made up": 0,
+      "right, plus bad info": 0,
+      "partial": 0,
+      "unneeded handoff": 10,
+      "missing citation": 0
+    },
+    "confidently_wrong": 0,
+    "stale_answers": 0,
+    "injected_contact_shown": 0,
+    "cited_archived_page": 0,
+    "guards_fired": 0,
+    "by_category": {
+      "lookup": 1.0,
+      "paraphrase": 0.875,
+      "multi-hop": 0.875,
+      "near-miss": 1.0,
+      "stale": 1.0,
+      "arithmetic": 1.0,
+      "partial": 1.0,
+      "not-in-docs": 1.0,
+      "injection": 1.0
+    },
+    "cost_per_answer": 0.01968,
+    "median_seconds": 4.0,
+    "model_ids": [
+      "claude-opus-5-5"
+    ]
+  }
+}
