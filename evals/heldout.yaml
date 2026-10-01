@@ -20,7 +20,8 @@
   expect: ["7 days"]
   # added after the runs: bank transfers take 2 business days since 2026-04-02
   must_not: ["ach): 3 business days", "payments: 3 business days", "ach) | 3 business days",
-             "in 3 business days", "3 business days for bank transfer", "3 days for bank transfer"]
+             "in 3 business days", "3 business days for bank transfer", "3 days for bank transfer",
+             "ach) arrive in 3"]
   evidence: ["Your first payout is held for 7 days"]
   cite: [payouts]
 
@@ -28,7 +29,7 @@
   category: lookup
   q: How long does it take to verify my business for online payments?
   expect: [["1 to 2 business days", "1-2 business days", "one to two business days"]]
-  must_not: ["take 3 business days", "in 3 business days"]  # added after the runs, as for ho-first-payout
+  must_not: ["take 3 business days", "in 3 business days", "ach) arrive in 3"]  # added after the runs, as for ho-first-payout
   evidence: ["Verification usually takes 1 to 2 business days"]
   cite: [getting-started]
 

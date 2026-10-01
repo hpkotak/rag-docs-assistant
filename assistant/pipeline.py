@@ -52,11 +52,19 @@ def user_message(question: str, chunks: list[Chunk]) -> str:
 # --- v2 checks in code ---------------------------------------------------------------------------
 
 _EMAIL = re.compile(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+")
-_HOST = re.compile(r"\b(?:[\w-]+\.)+[^\W\d_]{2,}\b")  # anything shaped like a domain name, in any alphabet
+_DOMAIN = r"\b(?:[\w-]+\.)+[^\W\d_]{2,}\b"
+_HOST = re.compile(r"\b(?:[\w-]+\.)+(?!(?:pdf|csv|tsv|txt|md|json|xml|ya?ml|docx?|xlsx?|pptx?|png|jpe?g|zip)\b)"
+                   r"[^\W\d_]{2,}\b", re.I)
+_URL_HOST = re.compile(r"(?:https?://|www\.)(" + _DOMAIN + r")", re.I)
+# Any host using the brand name counts, even with an ending that looks like a file (tallyfox-support.zip).
+_BRAND_HOST = re.compile(r"\b(?:[\w-]+\.)*[\w-]*tallyf[o0]x[\w-]*(?:\.[\w-]+)+", re.I)
+_CNAME = re.compile(r"\b(?:point(?:ing)?|from)\s+`?([a-z0-9-]+(?:\.[a-z0-9-]+)+)`?\s+(?:to|at)\s+"
+                    r"`?portal\.tallyfox\.example\b", re.I)
 
 
 def _contacts(text: str) -> set[str]:
-    return {m.lower().rstrip(".") for m in _EMAIL.findall(text) + _HOST.findall(text)}
+    return {m.lower().rstrip(".") for m in
+            _EMAIL.findall(text) + _HOST.findall(text) + _URL_HOST.findall(text) + _BRAND_HOST.findall(text)}
 
 
 @lru_cache(maxsize=1)
@@ -66,9 +74,16 @@ def official_contacts() -> frozenset[str]:
 
 
 def unknown_contacts(answer: str) -> list[str]:
-    """Email addresses and domain names that aren't in the official articles. This is an allowlist, so
-    a look-alike (tallyf0x-support.example) is blocked the same way as any other unknown address."""
-    return sorted(_contacts(answer) - official_contacts())
+    """Contact destinations must be in the official articles. A customer's CNAME source isn't a contact."""
+    customer_domains = set()
+    for paragraph in answer.split("\n\n"):
+        if not re.search(r"\bCNAME\b", paragraph, re.I):
+            continue
+        for host in _CNAME.findall(paragraph):
+            host = host.lower()
+            if "tallyfox" not in host and "tallyf0x" not in host:
+                customer_domains.add(host)
+    return sorted(_contacts(answer) - official_contacts() - customer_domains)
 
 
 def check(out: dict, chunks: list[Chunk]) -> dict:
@@ -77,7 +92,7 @@ def check(out: dict, chunks: list[Chunk]) -> dict:
     ids = {c.id for c in chunks}
     bad = [c for c in out["citations"] if c not in ids]
     if bad:
-        guards.append(f"removed citations that weren't in the sources: {', '.join(bad)}")
+        guards.append(f"removed {len(bad)} citations that weren't in the sources")
         out["citations"] = [c for c in out["citations"] if c in ids]
     contacts = unknown_contacts(out["answer"])
     if contacts:

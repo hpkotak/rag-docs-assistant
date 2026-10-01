@@ -4,7 +4,7 @@
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | haiku/v1 | 78% (295 answers) | 44/59 | 31 | 10 | 38 | 0 | 14 | $0.0045 | 5.1s |
 | haiku/v2 | 95% (295 answers) | 55/59 | 1 | 0 | 0 | 0 | 8 | $0.0047 | 4.7s |
-| opus/v1 | 73% (295 answers) | 42/59 | 10 | 0 | 52 | 2 | 47 | $0.0206 | 4.7s |
+| opus/v1 | 74% (295 answers) | 42/59 | 10 | 0 | 52 | 2 | 47 | $0.0206 | 4.7s |
 | opus/v2 | 94% (295 answers) | 55/59 | 0 | 0 | 0 | 0 | 10 | $0.0197 | 4.0s |
 
 ## Outcomes
@@ -13,7 +13,7 @@
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | haiku/v1 | 31 | 0 | 21 | 0 | 14 | 0 | 0 | 0 |
 | haiku/v2 | 1 | 0 | 5 | 0 | 8 | 0 | 0 | 0 |
-| opus/v1 | 10 | 0 | 22 | 0 | 47 | 0 | 0 | 0 |
+| opus/v1 | 10 | 0 | 21 | 0 | 47 | 0 | 0 | 0 |
 | opus/v2 | 0 | 0 | 7 | 0 | 10 | 0 | 0 | 0 |
 
 ## Grading changes since the run
@@ -24,7 +24,7 @@ Single answers graded correct when they were collected, and by the current grade
 | --- | --- | --- |
 | haiku/v1 | 244 | 229 |
 | haiku/v2 | 283 | 281 |
-| opus/v1 | 227 | 216 |
+| opus/v1 | 227 | 217 |
 | opus/v2 | 283 | 278 |
 
 ## By category (share of single answers correct)
@@ -34,7 +34,7 @@ Single answers graded correct when they were collected, and by the current grade
 | lookup | 85% | 100% | 83% | 100% |
 | paraphrase | 48% | 75% | 28% | 70% |
 | multi-hop | 80% | 92% | 68% | 88% |
-| near-miss | 55% | 100% | 62% | 100% |
+| near-miss | 55% | 100% | 65% | 100% |
 | stale | 71% | 100% | 71% | 100% |
 | arithmetic | 100% | 96% | 100% | 100% |
 | partial | 100% | 100% | 100% | 100% |
@@ -75,7 +75,7 @@ Single answers graded correct when they were collected, and by the current grade
 | webhook-down-weekend | multi-hop | 5/5 | 5/5 | 2/5 | 5/5 |
 | growth-custom-domain | near-miss | 0/5 | 5/5 | 0/5 | 5/5 |
 | scale-team-size | near-miss | 0/5 | 5/5 | 0/5 | 5/5 |
-| scale-extra-member | near-miss | 2/5 | 5/5 | 0/5 | 5/5 |
+| scale-extra-member | near-miss | 2/5 | 5/5 | 1/5 | 5/5 |
 | starter-extra-member | near-miss | 0/5 | 5/5 | 5/5 | 5/5 |
 | starter-require-2fa | near-miss | 5/5 | 5/5 | 5/5 | 5/5 |
 | starter-tax-rates | near-miss | 5/5 | 5/5 | 5/5 | 5/5 |
@@ -182,7 +182,7 @@ One failing answer per question and setup.
 ### scale-extra-member: How much is each extra team member on Scale?
 
 - **haiku/v1**, wrong answer (3 of 5 runs failed; missing $6; contains '$10'; doesn't cite plans-and-pricing): Each extra team member on the Scale plan costs $10 per member per month.
-- **opus/v1**, unneeded handoff (5 of 5 runs failed; contains '$10'; handed off): On the Scale plan, each extra team member costs **$6 per month**, according to our current Plans and pricing page. Scale includes 20 team members before extra charges apply.  We have an older pricing page from 2025 that lists a different price: $10 per member per month on Scale, with only 10 members included. The current page is the one our other help articles point to, so $6 is most likely correc...
+- **opus/v1**, unneeded handoff (4 of 5 runs failed; handed off): On the Scale plan, each extra team member costs **$6 per month**, according to our current Plans and pricing page. Scale includes 20 team members before extra charges apply.  We have an older pricing page from 2025 that lists a different price: $10 per member per month on Scale, with only 10 members included. The current page is the one our other help articles point to, so $6 is most likely correc...
 
 ### starter-extra-member: Can I pay for a second team member on Starter?
 

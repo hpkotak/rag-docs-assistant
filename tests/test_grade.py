@@ -56,6 +56,71 @@ def test_right_answer_that_also_quotes_an_outdated_value_still_fails():
     assert not r["pass"] and r["outcome"] == "right, plus bad info"
 
 
+@pytest.mark.parametrize("qid,path,fact,citation", [
+    ("card-money-arrival", None, "2 business days", "payouts#intro"),
+    ("ho-first-payout", SETS["heldout"], "7 days", "payouts#intro"),
+    ("ho-verification-time", SETS["heldout"], "1 to 2 business days", "getting-started#intro"),
+])
+def test_ach_payouts_in_three_days_also_fail_without_the_unit(qid, path, fact, citation):
+    q = next(q for q in load_questions(path) if q["id"] == qid)
+    for wording in ("3.", "3 business days."):
+        r = grade(q, out(f"{fact}. Bank transfers (ACH) arrive in {wording}", citations=[citation]))
+        assert not r["pass"] and "ach) arrive in 3" in r["forbidden"]
+    r = grade(q, out(f"{fact}. ACH payouts take 2 business days; the old page still says 3.",
+                     citations=[citation]))
+    assert r["pass"]
+
+
+def test_scale_extra_member_allows_only_historical_ten_dollar_prices():
+    q = next(q for q in load_questions() if q["id"] == "scale-extra-member")
+    for old in ("An older pricing page (labelled 2025) lists a different price of $10 per extra member.",
+                "The archived page listed $10 per member."):
+        answer = "Each extra member costs $6 on Scale. " + old
+        assert grade(q, out(answer, citations=["plans-and-pricing#intro"]))["pass"]
+        for current in ("Today it costs $10.", "Each extra member costs $10."):
+            assert not grade(q, out(answer + " " + current, citations=["plans-and-pricing#intro"]))["pass"]
+    for answer in ("Each extra member costs $10.", "The price is $6 or $10.",
+                   "The older page lists $6, but the current price is $10."):
+        assert not grade(q, out(answer, citations=["plans-and-pricing#intro"]))["pass"]
+
+
+def test_saved_answers_change_only_for_the_two_grading_corrections():
+    changes = []
+    matches = []
+    scale_answers = 0
+    for path in sorted((ROOT / "results").glob("*/results.jsonl")):
+        questions = {q["id"]: q for q in load_questions(SETS.get(path.parent.name))}
+        for line in path.read_text().splitlines():
+            r = json.loads(line)
+            if "error" in r or r["question"] not in questions:
+                continue
+            q = questions[r["question"]]
+            old = dict(q)
+            key = (path.parent.name, r["question"], r["model"], r["version"], r["trial"])
+            if q["id"] == "scale-extra-member":
+                scale_answers += 1
+                old.pop("must_not_current")
+                old["must_not"] = ["$10"]
+            elif q["id"] in ("card-money-arrival", "ho-first-payout", "ho-verification-time"):
+                old["must_not"] = [p for p in q["must_not"] if p != "ach) arrive in 3"]
+                if contains(r["answer"], "ach) arrive in 3"):
+                    matches.append(key)
+            else:
+                continue
+            before, after = grade(old, r), grade(q, r)
+            if (before["pass"], before["outcome"]) != (after["pass"], after["outcome"]):
+                changes.append((key, before["pass"], after["pass"]))
+    assert scale_answers == 35
+    assert matches == [
+        ("heldout", "ho-first-payout", "haiku", "v2", 1),
+        ("heldout", "ho-verification-time", "opus", "v1", 4),
+    ]
+    assert changes == [
+        (("claude-code", "scale-extra-member", "opus", "v1", 4), False, True),
+        (("heldout", "ho-verification-time", "opus", "v1", 4), True, False),
+    ]
+
+
 def test_yes_no_questions_check_which_way_the_answer_goes():
     q = {"id": "okta", "q": "?", "verdict": "no", "expect": ["scale"], "cite": ["sso-security"]}
     wrong = out("Yes, Okta works on Growth and Scale.", citations=["sso-security#x"])
@@ -113,5 +178,6 @@ def test_current_code_checks_leave_the_saved_grades_unchanged(folder):
         assert not r["guards"]  # so the saved answer is what the model returned
         replayed = check({"answer": r["answer"], "citations": list(r["raw_citations"]), "handoff": r["handoff"]},
                          [Chunk(i, i.split("#")[0], "") for i in r["retrieved"]])
+        assert not replayed.get("blocked_contacts"), (r["model"], r["question"], r["trial"])
         q = questions[r["question"]]
         assert grade(q, replayed)["outcome"] == grade(q, r)["outcome"], (r["model"], r["question"], r["trial"])

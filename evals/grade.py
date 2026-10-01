@@ -46,6 +46,14 @@ def has_item(text: str, item) -> bool:
     return any(contains(text, p) for p in (item if isinstance(item, list) else [item]))
 
 
+def contains_current(text: str, phrase: str) -> bool:
+    """Ignore a value explicitly attributed to an old page; later uses still count."""
+    old = (r"\b(?:old|older|archived)\s+(?:pricing\s+)?page\b[^.!?;]*?"
+           r"\b(?:says|said|lists|listed)\b(?:(?!\b(?:current|now|today|but)\b)[^.!?;])*?"
+           + re.escape(normalize(phrase)) + r"(?!\d|\.\d)")
+    return contains(re.sub(old, "", normalize(text)), phrase)
+
+
 def cites(citations: list[str], item) -> bool:
     docs = {doc_of(c) for c in citations}
     return any(d in docs for d in (item if isinstance(item, list) else [item]))
@@ -77,6 +85,7 @@ def grade(q: dict, out: dict) -> dict:
         missing.append(f"a clear \"{q['verdict']}\" at the start")
     contradicted = [p for p in q.get("contradicts", []) if contains(ans, p)]
     forbidden = contradicted + [p for p in q.get("must_not", []) if contains(ans, p)]
+    forbidden += [p for p in q.get("must_not_current", []) if contains_current(ans, p)]
     uncited = [i for i in q.get("cite", []) if not cites(out["citations"], i)]
     handoff_ok = out["handoff"] == handoff_expected
 
