@@ -88,7 +88,8 @@ def test_saved_answers_change_only_for_the_two_grading_corrections():
     changes = []
     matches = []
     scale_answers = 0
-    for path in sorted((ROOT / "results").glob("*/results.jsonl")):
+    for folder in ("ablation", "claude-code", "heldout"):  # the published answers (results/mock is not committed)
+        path = ROOT / "results" / folder / "results.jsonl"
         questions = {q["id"]: q for q in load_questions(SETS.get(path.parent.name))}
         for line in path.read_text().splitlines():
             r = json.loads(line)
@@ -110,7 +111,7 @@ def test_saved_answers_change_only_for_the_two_grading_corrections():
             before, after = grade(old, r), grade(q, r)
             if (before["pass"], before["outcome"]) != (after["pass"], after["outcome"]):
                 changes.append((key, before["pass"], after["pass"]))
-    assert scale_answers == 35
+    assert scale_answers == 25
     assert matches == [
         ("heldout", "ho-first-payout", "haiku", "v2", 1),
         ("heldout", "ho-verification-time", "opus", "v1", 4),
