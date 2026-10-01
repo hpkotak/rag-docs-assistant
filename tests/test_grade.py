@@ -1,4 +1,13 @@
+import json
+
+import pytest
+
+from assistant.corpus import ROOT, Chunk
+from assistant.pipeline import check
 from evals.grade import contains, grade
+from evals.report import load_questions
+
+SETS = {"claude-code": None, "heldout": ROOT / "evals" / "heldout.yaml"}
 
 Q = {"id": "x", "q": "?", "expect": ["$5"], "must_not": ["$16"], "cite": [["payment-methods", "changelog"]]}
 
@@ -57,3 +66,52 @@ def test_yes_no_questions_check_which_way_the_answer_goes():
     yes = {"id": "rec", "q": "?", "verdict": "yes", "cite": ["changelog"]}
     assert grade(yes, out("Yes, recurring invoices are on Growth.", citations=["changelog#x"]))["pass"]
     assert not grade(yes, out("No, they're Scale only.", citations=["changelog#x"]))["pass"]
+
+
+def test_every_yes_no_question_in_the_eval_sets_is_checked():
+    # The check was once skipped for every "no" question: unquoted, YAML reads no as False.
+    checked = [q for path in SETS.values() for q in load_questions(path) if "verdict" in q]
+    assert len(checked) == 12
+    for q in checked:
+        wrong_way = "Yes, that's included." if q["verdict"] == "no" else "No, that isn't available."
+        facts = " ".join(e if isinstance(e, str) else e[0] for e in q.get("expect", []))
+        cites = [c if isinstance(c, str) else c[0] for c in q.get("cite", [])]
+        r = grade(q, out(f"{wrong_way} {facts}", citations=cites))
+        assert not r["pass"] and f'a clear "{q["verdict"]}" at the start' in r["missing"], q["id"]
+    with pytest.raises(ValueError):
+        grade({"id": "x", "q": "?", "verdict": False}, out("No."))
+
+
+def test_text_that_contradicts_the_answer_makes_it_wrong():
+    q = {"id": "lock", "q": "?", "expect": ["1 october 2026"], "contradicts": ["$29 on 15 october"],
+         "must_not": ["$19"], "cite": ["changelog"]}
+    good = "Your price changes at your first renewal after 1 October 2026."
+    assert grade(q, out(good, citations=["changelog#x"]))["pass"]
+    r = grade(q, out(good + " So you'd pay $29 on 15 October.", citations=["changelog#x"]))
+    assert not r["pass"] and r["outcome"] == "wrong answer"
+    assert grade(q, out(good + " It was once $19.", citations=["changelog#x"]))["outcome"] == "right, plus bad info"
+
+
+def test_the_answered_part_of_a_handoff_needs_its_citation():
+    q = {"id": "p", "q": "?", "expect": ["$99"], "cite": ["plans-and-pricing"], "handoff": True}
+    answer = "Scale is $99; I've asked support about the rest."
+    assert grade(q, out(answer, citations=["plans-and-pricing#intro"], handoff=True))["pass"]
+    r = grade(q, out(answer, citations=[], handoff=True))
+    assert not r["pass"] and r["outcome"] == "missing citation"
+
+
+@pytest.mark.parametrize("folder", ["claude-code", "heldout"])
+def test_current_code_checks_leave_the_saved_grades_unchanged(folder):
+    # The checks in assistant/pipeline.py were tightened after these answers were collected. Replaying
+    # them over what the model returned must not change any grade, or the saved results would no longer
+    # describe the current code.
+    questions = {q["id"]: q for q in load_questions(SETS[folder])}
+    for line in (ROOT / "results" / folder / "results.jsonl").read_text().splitlines():
+        r = json.loads(line)
+        if "error" in r or r["version"] != "v2":
+            continue
+        assert not r["guards"]  # so the saved answer is what the model returned
+        replayed = check({"answer": r["answer"], "citations": list(r["raw_citations"]), "handoff": r["handoff"]},
+                         [Chunk(i, i.split("#")[0], "") for i in r["retrieved"]])
+        q = questions[r["question"]]
+        assert grade(q, replayed)["outcome"] == grade(q, r)["outcome"], (r["model"], r["question"], r["trial"])

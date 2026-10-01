@@ -1,7 +1,11 @@
 # Held-out questions for the Tallyfox help assistant.
 #
 # Written after the assistant was frozen (git tag v2-frozen), and committed before any model answered
-# them. They ask about facts the main set (questions.yaml) doesn't. Same fields and grading rules.
+# them. None repeats a main-set question (questions.yaml), but some draw on the same articles and table
+# rows: the billing email, the $6 extra-member price, the bank transfer fee. Same fields and grading rules.
+#
+# Checks marked "added after the runs" come from reading the saved answers (see "Limits of this test"
+# in the README).
 
 - id: ho-default-terms
   category: lookup
@@ -14,6 +18,9 @@
   category: lookup
   q: Why hasn't my first payout arrived yet? How long is it held?
   expect: ["7 days"]
+  # added after the runs: bank transfers take 2 business days since 2026-04-02
+  must_not: ["ach): 3 business days", "payments: 3 business days", "ach) | 3 business days",
+             "in 3 business days", "3 business days for bank transfer", "3 days for bank transfer"]
   evidence: ["Your first payout is held for 7 days"]
   cite: [payouts]
 
@@ -21,6 +28,7 @@
   category: lookup
   q: How long does it take to verify my business for online payments?
   expect: [["1 to 2 business days", "1-2 business days", "one to two business days"]]
+  must_not: ["take 3 business days", "in 3 business days"]  # added after the runs, as for ho-first-payout
   evidence: ["Verification usually takes 1 to 2 business days"]
   cite: [getting-started]
 
@@ -48,7 +56,7 @@
 - id: ho-slack-ping
   category: paraphrase
   q: Can our team get a message in our chat channel whenever a client pays?
-  verdict: yes
+  verdict: "yes"
   expect: ["slack"]
   evidence: [["Post a message to a Slack channel when an invoice is paid", "Send a message to a Slack channel when an invoice is paid"]]
   cite: [[integrations, changelog]]
@@ -56,7 +64,7 @@
 - id: ho-starter-euro-ach
   category: multi-hop
   q: I'm on Starter. Can my client pay a euro invoice by bank transfer?
-  verdict: no
+  verdict: "no"
   expect: [["growth", "scale", "us dollars", "usd"]]
   evidence: [["Bank transfer (ACH) payments are only available for invoices in US dollars", "On the Growth and Scale plans you can invoice clients in more than 40 currencies"]]
   cite: [[multi-currency, plans-and-pricing]]
@@ -78,7 +86,7 @@
 - id: ho-starter-own-domain
   category: near-miss
   q: Can I send invoice emails from my own domain on the Starter plan?
-  verdict: no
+  verdict: "no"
   expect: [["growth", "scale"]]
   evidence: [["On Growth and Scale, send from your own domain", "| Custom sending domain | No | Yes | Yes |"]]
   cite: [[email-deliverability, plans-and-pricing]]
@@ -109,6 +117,9 @@
   category: stale
   q: I've paid $29 a month for Growth since last year. When does my price change?
   expect: [["2026-10-01", "october 1, 2026", "october 1st, 2026", "1 october 2026", "1st october 2026", "oct 1, 2026", "october 2026"]]
+  # added after the runs: for a renewal on the 15th, the first renewal after 1 October is 15 October,
+  # so $39 is charged from that date, not a month later.
+  contradicts: ["$29 on 15 october"]
   evidence: ["Existing customers keep their current price until\ntheir next renewal after 2026-10-01"]
   cite: [changelog]
 

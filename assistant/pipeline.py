@@ -52,21 +52,23 @@ def user_message(question: str, chunks: list[Chunk]) -> str:
 # --- v2 checks in code ---------------------------------------------------------------------------
 
 _EMAIL = re.compile(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+")
-_BRAND_HOST = re.compile(r"\b[\w.-]*tallyfox[\w.-]*\.[a-z]{2,}\b", re.I)
+_HOST = re.compile(r"\b(?:[\w-]+\.)+[^\W\d_]{2,}\b")  # anything shaped like a domain name, in any alphabet
+
+
+def _contacts(text: str) -> set[str]:
+    return {m.lower().rstrip(".") for m in _EMAIL.findall(text) + _HOST.findall(text)}
 
 
 @lru_cache(maxsize=1)
 def official_contacts() -> frozenset[str]:
-    """Email addresses and Tallyfox hostnames that appear in Tallyfox's own articles (not community posts)."""
-    text = " ".join(d.body for d in load_docs() if d.status != "community")
-    return frozenset(m.lower() for m in _EMAIL.findall(text) + _BRAND_HOST.findall(text))
+    """Email addresses and domain names that appear in Tallyfox's own articles (not community posts)."""
+    return frozenset(_contacts(" ".join(d.body for d in load_docs() if d.status != "community")))
 
 
 def unknown_contacts(answer: str) -> list[str]:
-    """Emails, and hostnames that use the brand name, that aren't in the official articles."""
-    found = {m.lower().rstrip(".") for m in _EMAIL.findall(answer)}
-    found |= {m.lower().rstrip(".") for m in _BRAND_HOST.findall(answer)}
-    return sorted(c for c in found if c not in official_contacts())
+    """Email addresses and domain names that aren't in the official articles. This is an allowlist, so
+    a look-alike (tallyf0x-support.example) is blocked the same way as any other unknown address."""
+    return sorted(_contacts(answer) - official_contacts())
 
 
 def check(out: dict, chunks: list[Chunk]) -> dict:
@@ -79,10 +81,13 @@ def check(out: dict, chunks: list[Chunk]) -> dict:
         out["citations"] = [c for c in out["citations"] if c in ids]
     contacts = unknown_contacts(out["answer"])
     if contacts:
-        guards.append(f"blocked unknown contact details: {', '.join(contacts)}")
-        out.update(answer=HANDOFF_REPLY, citations=[], handoff=True)
-    if not out["handoff"] and not out["citations"]:
-        guards.append("no valid citation, so handed off instead of answering")
+        # The guard message is shown on the chat page, so it must not repeat what was blocked.
+        guards.append("blocked contact details that aren't in Tallyfox's own articles")
+        out.update(answer=HANDOFF_REPLY, citations=[], handoff=True, blocked_contacts=contacts)
+    if not out["citations"] and out["answer"] != HANDOFF_REPLY:
+        # Also when the model hands off: a hand-off flag doesn't make uncited text safe to show.
+        guards.append("hand-off with no valid citation, so sent the standard hand-off message" if out["handoff"]
+                      else "no valid citation, so handed off instead of answering")
         out.update(answer=HANDOFF_REPLY, handoff=True)
     return {**out, "guards": guards}
 

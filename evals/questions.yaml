@@ -2,8 +2,10 @@
 #
 # Fields:
 #   verdict   for yes/no questions: the first sentence must say "yes" or "no" (see evals/grade.py).
+#             Keep the quotes: a bare yes or no is a YAML boolean, and the grader rejects it.
 #   expect    facts the answer must contain. Each item is a string, or a list of accepted alternatives.
 #   must_not  text the answer must not contain (stale values, wrong sums, invented numbers, injected text).
+#   contradicts  text that makes the answer wrong even when the expected facts are also there.
 #   evidence  text from the docs the answer depends on. Used to check retrieval: is it in the
 #             sources sent to the model? A list inside means any one of those is enough.
 #   cite      help articles the answer must cite. Each item is an article, or a list of articles where
@@ -12,6 +14,9 @@
 #             answer it (or only answer part of it).
 #
 # Matching ignores case, commas in numbers, hyphens and trailing ".00" on dollar amounts.
+#
+# Checks marked "added after the runs" come from reading the saved answers: outdated values that the
+# original checks let through (see "Limits of this test" in the README).
 
 # --- Direct lookups -------------------------------------------------------------------------------
 - id: growth-price
@@ -24,7 +29,7 @@
 - id: starter-invoice-limit
   category: lookup
   q: How many invoices can I send each month on Starter?
-  expect: ["50"]
+  expect: [["50 invoices", "50 per month", "50 a month", "50 each month"]]  # was "50", which "up to 50 clients" also matched
   must_not: ["30 invoices"]
   evidence: ["| Invoices per month | 50 |"]
   cite: [plans-and-pricing]
@@ -120,6 +125,7 @@
   category: paraphrase
   q: Is there a way to bill the same customer every month without making the bill again each time?
   expect: ["recurring"]
+  must_not: ["available on the scale plan", "only on the scale plan"]  # added after the runs: on Growth since 2026-06-15
   evidence: ["sends a copy of the same invoice to a client on a schedule"]
   cite: [[invoices-recurring, changelog, plans-and-pricing]]
 
@@ -148,6 +154,7 @@
   category: paraphrase
   q: Our developer keeps getting "too many requests" back from you. What should their code do?
   expect: ["retry-after"]
+  must_not: ["scale plan: 120", "scale: 120", "scale allows 120"]  # added after the runs: 300 since 2026-05-20
   evidence: ["The `Retry-After` header tells you"]
   cite: [[api-rate-limits, api-errors]]
 
@@ -155,6 +162,7 @@
   category: paraphrase
   q: After a client pays by card, when does the money reach my bank?
   expect: ["2 business days"]
+  must_not: ["take 3 business days", "in 3 business days"]  # added after the runs: bank transfers take 2 since 2026-04-02
   evidence: ["| Card, Apple Pay, Google Pay | 2 business days |"]
   cite: [payouts]
 
@@ -178,7 +186,7 @@
 - id: growth-okta
   category: multi-hop
   q: We're on Growth. Can our team sign in through Okta?
-  verdict: no
+  verdict: "no"
   expect: ["scale"]
   evidence: [["SAML single sign-on (SSO):** Scale only", "| SAML single sign-on | No | No | Yes |"]]
   cite: [[sso-security, plans-and-pricing]]
@@ -200,7 +208,7 @@
 - id: member-api-key
   category: multi-hop
   q: Can someone with the Member role create an API key?
-  verdict: no
+  verdict: "no"
   expect: [["owner", "admin"]]
   evidence: [["Owners and Admins can create API keys", "Can manage team members and API keys"]]
   cite: [[api-authentication, team-roles]]
@@ -215,7 +223,7 @@
 - id: webhook-down-weekend
   category: multi-hop
   q: If our webhook endpoint is down for a long weekend, do we lose the events?
-  verdict: no
+  verdict: "no"
   expect: [["3 days", "3 day"], ["30 days", "30 day"]]
   evidence: ["we retry up to 8 times over 3 days", "resent from the webhook's log for up to 30 days"]
   cite: [api-webhooks]
@@ -224,8 +232,9 @@
 - id: growth-custom-domain
   category: near-miss
   q: Can I put the client portal on my own domain if I'm on Growth?
-  verdict: no
+  verdict: "no"
   expect: ["scale"]
+  must_not: ["$79"]  # added after the runs: Scale is $99
   evidence: [["On Scale, the portal can use your own domain", "| Custom domain for the client portal | No | No | Yes |"]]
   cite: [[client-portal, plans-and-pricing]]
 
@@ -248,7 +257,7 @@
 - id: starter-extra-member
   category: near-miss
   q: Can I pay for a second team member on Starter?
-  verdict: no
+  verdict: "no"
   expect: [["not available", "isn't available", "can't", "cannot", "not possible", "doesn't allow", "does not allow", "only 1", "only one", "upgrade"]]
   must_not: ["$10 per"]
   evidence: ["| Extra team members | Not available"]
@@ -257,7 +266,7 @@
 - id: starter-require-2fa
   category: near-miss
   q: I'm on Starter. Can I force everyone on my team to use two-factor authentication?
-  verdict: no
+  verdict: "no"
   expect: [["growth", "scale"]]
   evidence: ["On Growth and\nScale, Admins can also require it"]
   cite: [sso-security]
@@ -301,7 +310,7 @@
 - id: growth-still-29
   category: stale
   q: Growth is still $29 a month, right?
-  verdict: no
+  verdict: "no"
   expect: ["$39"]
   evidence: [["| Growth | $39 |", "Growth $39"]]
   cite: [[plans-and-pricing, changelog]]
@@ -309,7 +318,7 @@
 - id: recurring-on-growth
   category: stale
   q: Can I set up recurring invoices on the Growth plan?
-  verdict: yes
+  verdict: "yes"
   expect: [["yes", "included", "available on growth", "available on the growth"]]
   must_not: ["upgrade to scale", "upgrade to the scale", "not available on growth", "isn't available on growth", "not included in growth", "not included on growth"]
   evidence: [["are now included in the Growth plan", "| Recurring invoices | No | Yes | Yes |"]]
@@ -318,7 +327,7 @@
 - id: paypal-new-account
   category: stale
   q: I just signed up. How do I connect PayPal so clients can pay me with it?
-  verdict: no
+  verdict: "no"
   expect: [["no longer", "not available", "isn't available", "not possible", "can't", "cannot", "retired"]]
   evidence: ["New accounts can no longer connect PayPal"]
   cite: [changelog]

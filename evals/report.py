@@ -27,6 +27,7 @@ def load(out: Path, questions: list[dict] = QUESTIONS) -> list[dict]:
         if r["question"] not in by_id:
             continue
         if "error" not in r:
+            r["pass_when_run"] = r.get("pass")  # as graded when the answer was collected
             r.update(grade(by_id[r["question"]], r))
         key = (r["model"], r["version"], r["question"], r["trial"])
         if "error" not in r or key not in rows:  # a successful retry replaces an earlier error
@@ -50,6 +51,8 @@ def summarise(rows: list[dict]) -> dict:
             by_cat[r["category"]].append(r["pass"])
         summary[f"{model}/{version}"] = {
             "model": model, "version": version, "answers": len(ok), "errors": len(rs) - len(ok),
+            "passed": sum(r["pass"] for r in ok),
+            "passed_when_run": sum(bool(r["pass_when_run"]) for r in ok),
             "pass_rate": round(sum(r["pass"] for r in ok) / len(ok), 3) if ok else 0,
             "questions": len(by_q),
             "all_trials_pass": sum(all(v) for v in by_q.values()),
@@ -78,8 +81,8 @@ def md_report(summary: dict, rows: list[dict], questions: list[dict] = QUESTIONS
     categories = list(dict.fromkeys(q["category"] for q in questions))
     lines = ["# Docs assistant eval results", ""]
     lines += ["| Setup | Correct (single answers) | Questions correct in every run | Confidently wrong | "
-              "Outdated answers | Cited the archived 2025 pricing page | Injected contact shown | Unneeded handoffs | "
-              "Cost per answer | Median time |",
+              "Failed stale-category answers, no handoff | Cited the archived 2025 pricing page | "
+              "Injected contact shown | Unneeded handoffs | Cost per answer | Median time |",
               "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |"]
     for k, s in summary.items():
         lines.append(f"| {k} | {pct(s['pass_rate'])} ({s['answers']} answers) | {s['all_trials_pass']}/{s['questions']} "
@@ -90,6 +93,11 @@ def md_report(summary: dict, rows: list[dict], questions: list[dict] = QUESTIONS
     for k, s in summary.items():
         lines.append(f"| {k} | " + " | ".join(str(s["outcomes"][o]) for o in OUTCOMES)
                      + f" | {s['guards_fired']} | {s['errors']} |")
+    lines += ["", "## Grading changes since the run", "",
+              "Single answers graded correct when they were collected, and by the current grader.", "",
+              "| Setup | When collected | Now |", "| --- | --- | --- |"]
+    for k, s in summary.items():
+        lines.append(f"| {k} | {s['passed_when_run']} | {s['passed']} |")
     lines += ["", "## By category (share of single answers correct)", "",
               "| Category | " + " | ".join(keys) + " |", "| --- |" + " --- |" * len(keys)]
     for c in categories:

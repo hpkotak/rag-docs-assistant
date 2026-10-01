@@ -4,14 +4,16 @@
     "version": "v1-no-archive",
     "answers": 295,
     "errors": 0,
-    "pass_rate": 0.885,
+    "passed": 250,
+    "passed_when_run": 261,
+    "pass_rate": 0.847,
     "questions": 59,
-    "all_trials_pass": 52,
+    "all_trials_pass": 49,
     "trials": 5,
     "outcomes": {
       "wrong answer": 4,
       "made up": 4,
-      "right, plus bad info": 0,
+      "right, plus bad info": 11,
       "partial": 0,
       "unneeded handoff": 26,
       "missing citation": 0
@@ -23,7 +25,7 @@
     "guards_fired": 0,
     "by_category": {
       "lookup": 0.917,
-      "paraphrase": 0.75,
+      "paraphrase": 0.475,
       "multi-hop": 0.75,
       "near-miss": 1.0,
       "stale": 0.857,
